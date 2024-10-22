@@ -2,46 +2,79 @@ using Microsoft.AspNetCore.Mvc;
 using StarterKit.Models;
 using StarterKit.Services;
 
-namespace StarterKit.Controllers
+namespace StarterKit.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AttendanceController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AttendanceController : ControllerBase
+    private readonly IAttendanceService _attendanceService;
+
+    public AttendanceController(IAttendanceService attendanceService)
     {
-        private readonly IAttendanceService _attendanceService;
+        _attendanceService = attendanceService;
+    }
 
-        public AttendanceController(IAttendanceService attendanceService)
+    [HttpPost]
+    public IActionResult AttendEvent([FromBody] AttendanceModel model)
+    {
+        var userId = HttpContext.Session.GetString("UserId");
+        if (string.IsNullOrEmpty(userId))
         {
-            _attendanceService = attendanceService;
+            return Unauthorized(new { message = "Must be logged in to attend events" });
         }
 
-        [HttpPost]
-        public IActionResult AttendEvent([FromBody] AttendanceModel model)
+        // Ensure user can only create attendance for themselves
+        model.UserId = int.Parse(userId);
+
+        var result = _attendanceService.AttendEvent(model);
+        if (result.Success)
         {
-            var result = _attendanceService.AttendEvent(model);
-            if (result.Success)
-            {
-                return Ok(new { message = "Attendance registered successfully" });
-            }
-            return BadRequest(new { message = result.Message });
+            return Ok(new { message = "Attendance registered successfully" });
+        }
+        return BadRequest(new { message = result.Message });
+    }
+
+    [HttpGet]
+    public IActionResult GetAttendees(int eventId)
+    {
+        var userId = HttpContext.Session.GetString("UserId");
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(new { message = "Must be logged in to view attendees" });
         }
 
-        [HttpGet]
-        public IActionResult GetAttendees(int eventId)
+        var attendees = _attendanceService.GetAttendees(eventId);
+        return Ok(attendees);
+    }
+
+    [HttpDelete("{eventId}")]
+    public IActionResult CancelAttendance(int eventId)
+    {
+        var userId = HttpContext.Session.GetString("UserId");
+        if (string.IsNullOrEmpty(userId))
         {
-            var attendees = _attendanceService.GetAttendees(eventId);
-            return Ok(attendees);
+            return Unauthorized(new { message = "Must be logged in to cancel attendance" });
         }
 
-        [HttpDelete]
-        public IActionResult CancelAttendance(int eventId)
+        var result = _attendanceService.CancelAttendance(eventId);
+        if (result.Success)
         {
-            var result = _attendanceService.CancelAttendance(eventId);
-            if (result.Success)
-            {
-                return Ok(new { message = "Attendance cancelled successfully" });
-            }
-            return BadRequest(new { message = result.Message });
+            return Ok(new { message = "Attendance cancelled successfully" });
         }
+        return BadRequest(new { message = result.Message });
+    }
+
+    [HttpGet("my-attendances")]
+    public IActionResult GetMyAttendances()
+    {
+        var userId = HttpContext.Session.GetString("UserId");
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(new { message = "Must be logged in to view your attendances" });
+        }
+
+        var attendances = _attendanceService.GetUserAttendances(int.Parse(userId));
+        return Ok(attendances);
     }
 }

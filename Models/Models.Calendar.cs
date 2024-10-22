@@ -3,28 +3,22 @@ namespace StarterKit.Models
     public class User
     {
         public int UserId { get; set; }
-
         public required string FirstName { get; set; }
-
         public required string LastName { get; set; }
-
         public required string Email { get; set; }
-
         public required string Password { get; set; }
-
-        // A comma sepparated string that could look like this: "mo,tu,we,th,fr"
+        public required string Username { get; set; } // Add this property
+        public required string Role { get; set; } // Add this property
         public required string RecuringDays { get; set; }
+        public List<Attendance> Attendances { get; set; } = new();
+        public List<Event_Attendance> Event_Attendances { get; set; } = new();
 
-        public required List<Attendance> Attendances { get; set; }
-
-        public required List<Event_Attendance> Event_Attendances { get; set; }
-        public string Username { get; internal set; }
-        public string Role { get; internal set; }
-
-        public static implicit operator User(User v)
+        // Remove this implicit operator as it's causing recursion
+        /*public static implicit operator User(User v)
         {
             throw new NotImplementedException();
-        }
+        }*/
+    }
     }
 
     public class Attendance

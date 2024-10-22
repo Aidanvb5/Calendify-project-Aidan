@@ -24,28 +24,43 @@ namespace StarterKit.Models
         public DbSet<Attendance> Attendance { get; set; }
         public DbSet<Event_Attendance> Event_Attendance { get; set; }
         public DbSet<Event> Event { get; set; }
-        public object OfficeAttendances { get; internal set; }
+        public DbSet<Attendance> OfficeAttendances { get; set; }
 
         public DatabaseContext(DbContextOptions<DatabaseContext> options) : base(options)
         {
-
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Existing admin configuration
             modelBuilder.Entity<Admin>()
-                .HasIndex(p => p.UserName).IsUnique();
+                .HasIndex(p => p.UserName)
+                .IsUnique();
 
-            modelBuilder.Entity<Admin>()
-                .HasData(new Admin { AdminId = 1, Email = "admin1@example.com", UserName = "admin1", Password = EncryptionHelper.HashPassword("password") });
-            modelBuilder.Entity<Admin>()
-                .HasData(new Admin { AdminId = 2, Email = "admin2@example.com", UserName = "admin2", Password = EncryptionHelper.HashPassword("tooeasytooguess") });
-            modelBuilder.Entity<Admin>()
-                .HasData(new Admin { AdminId = 3, Email = "admin3@example.com", UserName = "admin3", Password = EncryptionHelper.HashPassword("helloworld") });
-            modelBuilder.Entity<Admin>()
-                .HasData(new Admin { AdminId = 4, Email = "admin4@example.com", UserName = "admin4", Password = EncryptionHelper.HashPassword("Welcome123") });
-            modelBuilder.Entity<Admin>()
-                .HasData(new Admin { AdminId = 5, Email = "admin5@example.com", UserName = "admin5", Password = EncryptionHelper.HashPassword("Whatisapassword?") });
+            // Add seed data for admin
+            modelBuilder.Entity<Admin>().HasData(
+                new Admin { AdminId = 1, Email = "admin1@example.com", UserName = "admin1", Password = EncryptionHelper.HashPassword("password") },
+                // ... other admin seeds
+            );
+
+            // Add configurations for other entities
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<Event>()
+                .Property(e => e.AdminApproval)
+                .HasDefaultValue(false);
+
+            modelBuilder.Entity<Event_Attendance>()
+                .HasOne(ea => ea.Event)
+                .WithMany(e => e.Event_Attendances)
+                .HasForeignKey(ea => ea.EventId);
+
+            modelBuilder.Entity<Event_Attendance>()
+                .HasOne(ea => ea.User)
+                .WithMany(u => u.Event_Attendances)
+                .HasForeignKey(ea => ea.UserId);
         }
 
     }

@@ -2,72 +2,70 @@ using Microsoft.AspNetCore.Mvc;
 using StarterKit.Models;
 using StarterKit.Services;
 
-namespace StarterKit.Controllers
+namespace StarterKit.Controllers;
+[ApiController]
+[Route("api/[controller]")]
+public class EventController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class EventController : ControllerBase
+    private readonly IEventService _eventService;
+
+    public EventController(IEventService eventService)
     {
-        private readonly IEventService _eventService;
+        _eventService = eventService;
+    }
 
-        public EventController(IEventService eventService)
+    [HttpGet]
+    public IActionResult GetEvents()
+    {
+        var events = _eventService.GetEvents(); // Already includes Reviews and Attendees
+        return Ok(events);
+    }
+
+    [HttpPost]
+    public IActionResult CreateEvent([FromBody] EventModel model)
+    {
+        if (!HttpContext.Session.GetString("UserRole").Equals("Admin"))
         {
-            _eventService = eventService;
+            return Unauthorized(new { message = "Only admins can create events" });
         }
 
-        [HttpGet]
-        public IActionResult GetEvents()
+        var result = _eventService.CreateEvent(model);
+        if (result.Success)
         {
-            var events = _eventService.GetEvents();
-            return Ok(events);
+            return Ok(new { message = "Event created successfully" });
+        }
+        return BadRequest(new { message = result.Message });
+    }
+
+    [HttpPut("{eventId}")]
+    public IActionResult UpdateEvent(int eventId, [FromBody] EventModel model)
+    {
+        if (!HttpContext.Session.GetString("UserRole").Equals("Admin"))
+        {
+            return Unauthorized(new { message = "Only admins can update events" });
         }
 
-        [HttpPost]
-        public IActionResult CreateEvent([FromBody] EventModel model)
+        var result = _eventService.UpdateEvent(eventId, model);
+        if (result.Success)
         {
-            if (!HttpContext.Session.GetString("UserRole").Equals("Admin"))
-            {
-                return Unauthorized(new { message = "Only admins can create events" });
-            }
+            return Ok(new { message = "Event updated successfully" });
+        }
+        return BadRequest(new { message = result.Message });
+    }
 
-            var result = _eventService.CreateEvent(model);
-            if (result.Success)
-            {
-                return Ok(new { message = "Event created successfully" });
-            }
-            return BadRequest(new { message = result.Message });
+    [HttpDelete("{eventId}")]
+    public IActionResult DeleteEvent(int eventId)
+    {
+        if (!HttpContext.Session.GetString("UserRole").Equals("Admin"))
+        {
+            return Unauthorized(new { message = "Only admins can delete events" });
         }
 
-        [HttpPut("{eventId}")]
-        public IActionResult UpdateEvent(int eventId, [FromBody] EventModel model)
+        var result = _eventService.DeleteEvent(eventId);
+        if (result.Success)
         {
-            if (!HttpContext.Session.GetString("UserRole").Equals("Admin"))
-            {
-                return Unauthorized(new { message = "Only admins can update events" });
-            }
-
-            var result = _eventService.UpdateEvent(eventId, model);
-            if (result.Success)
-            {
-                return Ok(new { message = "Event updated successfully" });
-            }
-            return BadRequest(new { message = result.Message });
+            return Ok(new { message = "Event deleted successfully" });
         }
-
-        [HttpDelete("{eventId}")]
-        public IActionResult DeleteEvent(int eventId)
-        {
-            if (!HttpContext.Session.GetString("UserRole").Equals("Admin"))
-            {
-                return Unauthorized(new { message = "Only admins can delete events" });
-            }
-
-            var result = _eventService.DeleteEvent(eventId);
-            if (result.Success)
-            {
-                return Ok(new { message = "Event deleted successfully" });
-            }
-            return BadRequest(new { message = result.Message });
-        }
+        return BadRequest(new { message = result.Message });
     }
 }
