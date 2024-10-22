@@ -1,13 +1,10 @@
 using StarterKit.Models;
 
-namespace StarterKit.Services
+namespace StarterKit.Services;
+public interface ILoginService
 {
-	public interface ILoginService
-	{
-		LoginResult Login(string username, string password);
-		LoginStatus GetLoginStatus();
-		RegistrationResult Register(RegisterModel model);
-		// Add new method for admin login
-		LoginResult AdminLogin(string username, string password);
-	}
+    LoginResult Login(string username, string password);
+    LoginStatus GetLoginStatus();
+    RegistrationResult Register(RegisterModel model);
+    LoginResult AdminLogin(string username, string password); // This method is missing in the implementation
 }

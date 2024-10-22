@@ -2,6 +2,7 @@ using StarterKit.Models;
 using Microsoft.AspNetCore.Http;
 using System.Security.Cryptography;
 using System.Text;
+using StarterKit.Utils;
 
 namespace StarterKit.Services;
 
@@ -20,115 +21,68 @@ public class LoginService : ILoginService
     public LoginResult Login(string username, string password)
     {
         var user = _context.User.FirstOrDefault(u => u.Username == username);
-        if (user == null)
+        if (user == null || !VerifyPassword(password, user.Password))
         {
             return new LoginResult { Success = false, Message = "Invalid username or password" };
         }
 
-        var hashedPassword = EncryptionHelper.HashPassword(password);
-        if (user.Password != hashedPassword)
+        _httpContextAccessor.HttpContext.Session.SetString("UserId", user.UserId.ToString());
+        _httpContextAccessor.HttpContext.Session.SetString("UserRole", user.Role);
+
+        return new LoginResult { Success = true, User = user };
+    }
+
+    // Add the missing AdminLogin method
+    public LoginResult AdminLogin(string username, string password)
+    {
+        var admin = _context.Admin.FirstOrDefault(a => a.UserName == username);
+        if (admin == null || !VerifyPassword(password, admin.Password))
         {
-            return new LoginResult { Success = false, Message = "Invalid username or password" };
+            return new LoginResult { Success = false, Message = "Invalid admin credentials" };
         }
 
-        // Set session
-        _httpContextAccessor.HttpContext?.Session.SetString("UserId", user.UserId.ToString());
-        _httpContextAccessor.HttpContext?.Session.SetString("UserRole", user.Role);
-        _httpContextAccessor.HttpContext?.Session.SetString("Username", user.Username);
+        _httpContextAccessor.HttpContext.Session.SetString("AdminId", admin.AdminId.ToString());
+        _httpContextAccessor.HttpContext.Session.SetString("UserRole", "Admin");
 
-        return new LoginResult 
-        { 
-            Success = true, 
-            User = user,
-            Message = "Login successful"
-        };
+        return new LoginResult { Success = true, Message = "Admin login successful" };
     }
 
     public LoginStatus GetLoginStatus()
     {
-        var userId = _httpContextAccessor.HttpContext?.Session.GetString("UserId");
+        var userId = _httpContextAccessor.HttpContext.Session.GetString("UserId");
         if (string.IsNullOrEmpty(userId))
         {
             return new LoginStatus { IsLoggedIn = false };
         }
 
         var user = _context.User.Find(int.Parse(userId));
-        if (user == null)
-        {
-            return new LoginStatus { IsLoggedIn = false };
-        }
-
-        return new LoginStatus 
-        { 
-            IsLoggedIn = true, 
-            Username = user.Username 
-        };
+        return new LoginStatus { IsLoggedIn = true, Username = user.Username };
     }
 
     public RegistrationResult Register(RegisterModel model)
     {
-        // Validate input
-        if (string.IsNullOrWhiteSpace(model.Username) || 
-            string.IsNullOrWhiteSpace(model.Password) || 
-            string.IsNullOrWhiteSpace(model.Email))
-        {
-            return new RegistrationResult 
-            { 
-                Success = false, 
-                Message = "All fields are required" 
-            };
-        }
-
-        // Check if username already exists
         if (_context.User.Any(u => u.Username == model.Username))
         {
-            return new RegistrationResult 
-            { 
-                Success = false, 
-                Message = "Username already exists" 
-            };
-        }
-
-        // Check if email already exists
-        if (_context.User.Any(u => u.Email == model.Email))
-        {
-            return new RegistrationResult 
-            { 
-                Success = false, 
-                Message = "Email already exists" 
-            };
+            return new RegistrationResult { Success = false, Message = "Username already exists" };
         }
 
         var user = new User
         {
             Username = model.Username,
-            Password = EncryptionHelper.HashPassword(model.Password),
+            Password = StorePassword(model.Password),
             Email = model.Email,
-            Role = "User", // Default role
-            FirstName = model.FirstName ?? "", // Add these properties to RegisterModel
-            LastName = model.LastName ?? "",
-            RecuringDays = "" // Empty by default
+            Role = "User",
+            FirstName = "", // Add required properties
+            LastName = "",
+            RecuringDays = "",
+            Attendances = new List<Attendance>(),
+            Event_Attendances = new List<Event_Attendance>()
         };
 
-        try
-        {
-            _context.User.Add(user);
-            _context.SaveChanges();
+        _context.User.Add(user);
+        _context.SaveChanges();
 
-            return new RegistrationResult 
-            { 
-                Success = true,
-                Message = "Registration successful" 
-            };
-        }
-        catch (Exception ex)
-        {
-            return new RegistrationResult 
-            { 
-                Success = false,
-                Message = "An error occurred during registration" 
-            };
-        }
+        return new RegistrationResult { Success = true };
     }
 
     private static bool VerifyPassword(string inputPassword, string storedPassword)
@@ -136,6 +90,11 @@ public class LoginService : ILoginService
         var hashedInput = EncryptionHelper.HashPassword(inputPassword);
         return hashedInput == storedPassword;
     }
+
+	private string StorePassword(string password)
+	{
+		return Convert.ToBase64String(HashPassword(password));
+	}
 }
 
 

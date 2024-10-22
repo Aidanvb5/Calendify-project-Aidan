@@ -62,7 +62,7 @@ namespace StarterKit.Services;
         {
             Title = model.Title,
             Description = model.Description,
-            EventDate = model.Date,
+            EventDate = DateOnly.FromDateTime(model.Date),  // Convert DateTime to DateOnly
             StartTime = model.StartTime,
             EndTime = model.EndTime,
             Location = model.Location,

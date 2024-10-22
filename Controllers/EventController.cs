@@ -24,7 +24,7 @@ public class EventController : ControllerBase
     [HttpPost]
     public IActionResult CreateEvent([FromBody] EventModel model)
     {
-        if (!HttpContext.Session.GetString("UserRole").Equals("Admin"))
+        if (HttpContext?.Session?.GetString("User Role") != "Admin")
         {
             return Unauthorized(new { message = "Only admins can create events" });
         }
@@ -40,7 +40,7 @@ public class EventController : ControllerBase
     [HttpPut("{eventId}")]
     public IActionResult UpdateEvent(int eventId, [FromBody] EventModel model)
     {
-        if (!HttpContext.Session.GetString("UserRole").Equals("Admin"))
+        if (HttpContext?.Session?.GetString("User Role") != "Admin")
         {
             return Unauthorized(new { message = "Only admins can update events" });
         }
@@ -52,11 +52,10 @@ public class EventController : ControllerBase
         }
         return BadRequest(new { message = result.Message });
     }
-
     [HttpDelete("{eventId}")]
     public IActionResult DeleteEvent(int eventId)
     {
-        if (!HttpContext.Session.GetString("UserRole").Equals("Admin"))
+        if (HttpContext?.Session?.GetString("User Role") != "Admin")
         {
             return Unauthorized(new { message = "Only admins can delete events" });
         }

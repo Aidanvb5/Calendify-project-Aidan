@@ -13,6 +13,8 @@ namespace StarterKit
             builder.Services.AddControllersWithViews();
 
             builder.Services.AddDistributedMemoryCache();
+            
+            builder.Services.AddHttpContextAccessor();
 
             builder.Services.AddSession(options => 
             {
