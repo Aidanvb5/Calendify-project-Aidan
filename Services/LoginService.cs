@@ -44,6 +44,11 @@ public class LoginService : ILoginService
         return _context.Admin.FirstOrDefault(a => a.AdminId == adminId.Value);
     }
 
+    public bool IsAdminLoggedIn()
+    {
+        return _httpContextAccessor.HttpContext?.Session.GetString("adminLoggedIn") == "true";
+    }
+
     public void Logout()
     {
         _httpContextAccessor.HttpContext?.Session.Remove("AdminId");

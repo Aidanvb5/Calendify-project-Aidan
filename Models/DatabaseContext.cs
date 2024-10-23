@@ -13,7 +13,6 @@ namespace StarterKit.Models
         public DbSet<Event> Event { get; set; }
 
 
-
         public DatabaseContext(DbContextOptions<DatabaseContext> options) : base(options)
         {
 
