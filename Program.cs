@@ -13,8 +13,6 @@ namespace StarterKit
             builder.Services.AddControllersWithViews();
 
             builder.Services.AddDistributedMemoryCache();
-            
-            builder.Services.AddHttpContextAccessor();
 
             builder.Services.AddSession(options => 
             {
@@ -24,12 +22,6 @@ namespace StarterKit
             });
 
             builder.Services.AddScoped<ILoginService, LoginService>();
-
-            builder.Services.AddScoped<IEventService, EventService>();
-            
-            builder.Services.AddScoped<IAttendanceService, AttendanceService>();
-            
-            builder.Services.AddHttpContextAccessor();
 
             builder.Services.AddDbContext<DatabaseContext>(
                 options => options.UseSqlite(builder.Configuration.GetConnectionString("SqlLiteDb")));
@@ -55,8 +47,8 @@ namespace StarterKit
 
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=index}/{id?}");
-            
+                pattern: "{controller=Home}/{action=Index}/{id?}");
+
             app.Run();
 
         }

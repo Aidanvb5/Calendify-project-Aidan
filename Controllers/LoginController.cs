@@ -1,48 +1,45 @@
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using StarterKit.Models;
 using StarterKit.Services;
 
 namespace StarterKit.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-public class LoginController : ControllerBase
+
+[Route("api/v1/Login")]
+public class LoginController : Controller
 {
     private readonly ILoginService _loginService;
+    
 
     public LoginController(ILoginService loginService)
     {
         _loginService = loginService;
     }
 
-    [HttpPost]
-    public IActionResult Login([FromBody] LoginModel model)
+    [HttpPost("Login")]
+    public IActionResult Login([FromBody] LoginBody loginBody)
     {
-        var result = _loginService.Login(model.Username, model.Password);
-        if (result.Success)
-        {
-            HttpContext.Session.SetString("UserId", result.User.UserId.ToString());
-            HttpContext.Session.SetString("UserRole", result.User.Role);
-            return Ok(new { message = "Login successful", user = result.User });
-        }
-        return Unauthorized(new { message = result.Message });
+        // TODO: Impelement login method
+        return Unauthorized("Incorrect password");
     }
 
-    [HttpGet("status")]
-    public IActionResult GetLoginStatus()
+    [HttpGet("IsAdminLoggedIn")]
+    public IActionResult IsAdminLoggedIn()
     {
-        var status = _loginService.GetLoginStatus();
-        return Ok(new { isLoggedIn = status.IsLoggedIn, username = status.Username });
+        // TODO: This method should return a status 200 OK when logged in, else 403, unauthorized
+        return Unauthorized("You are not logged in");
     }
 
-    [HttpPost("register")]
-    public IActionResult Register([FromBody] RegisterModel model)
+    [HttpGet("Logout")]
+    public IActionResult Logout()
     {
-        var result = _loginService.Register(model);
-        if (result.Success)
-        {
-            return Ok(new { message = "Registration successful" });
-        }
-        return BadRequest(new { message = result.Message });
+        return Ok("Logged out");
     }
+
+}
+
+public class LoginBody
+{
+    public string? Username { get; set; }
+    public string? Password { get; set; }
 }
