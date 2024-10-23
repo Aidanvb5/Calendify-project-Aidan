@@ -1,11 +1,14 @@
 import { Routes, Route } from 'react-router-dom';
-import Home from './Home'; // Adjust the path if necessary
+import Home from './Home';
+import Login from './Login';
+import ErrorPage from '../shared/ErrorPage';
 
 const App = () => {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      {/* Add other routes here */}
+      <Route path="/login" element={<Login />} />
+      <Route path="*" element={<ErrorPage />} />
     </Routes>
   );
 };
