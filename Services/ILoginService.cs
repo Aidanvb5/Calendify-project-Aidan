@@ -1,5 +1,10 @@
+using StarterKit.Models;
+using StarterKit.Utils;
+
 namespace StarterKit.Services;
 
 public interface ILoginService {
-    public LoginStatus CheckPassword(string username, string inputPassword);
+    LoginStatus CheckPassword(string username, string password);
+    Admin? GetLoggedInAdmin();
+    void Logout();
 }

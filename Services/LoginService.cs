@@ -1,3 +1,4 @@
+// Services/LoginService.cs
 using StarterKit.Models;
 using StarterKit.Utils;
 
@@ -5,21 +6,46 @@ namespace StarterKit.Services;
 
 public enum LoginStatus { IncorrectPassword, IncorrectUsername, Success }
 
-public enum ADMIN_SESSION_KEY { adminLoggedIn }
 
 public class LoginService : ILoginService
 {
-
     private readonly DatabaseContext _context;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public LoginService(DatabaseContext context)
+    public LoginService(DatabaseContext context, IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
+        _httpContextAccessor = httpContextAccessor;
     }
 
-    public LoginStatus CheckPassword(string username, string inputPassword)
+    public LoginStatus CheckPassword(string username, string password)
     {
-        // TODO: Make this method check the password with what is in the database
-        return LoginStatus.IncorrectPassword;
+        var admin = _context.Admin.FirstOrDefault(a => a.UserName == username);
+        
+        if (admin == null)
+            return LoginStatus.IncorrectUsername;
+
+        string hashedPassword = EncryptionHelper.EncryptPassword(password);
+        
+        if (admin.Password != hashedPassword)
+            return LoginStatus.IncorrectPassword;
+
+        // Set session
+        _httpContextAccessor.HttpContext?.Session.SetInt32("AdminId", admin.AdminId);
+        return LoginStatus.Success;
+    }
+
+    public Admin? GetLoggedInAdmin()
+    {
+        var adminId = _httpContextAccessor.HttpContext?.Session.GetInt32("AdminId");
+        if (!adminId.HasValue)
+            return null;
+
+        return _context.Admin.FirstOrDefault(a => a.AdminId == adminId.Value);
+    }
+
+    public void Logout()
+    {
+        _httpContextAccessor.HttpContext?.Session.Remove("AdminId");
     }
 }
