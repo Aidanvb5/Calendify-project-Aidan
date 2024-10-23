@@ -1,13 +1,14 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home'; // Ensure this path is correct
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Home from './Home';
+import Login from './Login';
 
 const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
-        {/* Define other routes here */}
+        <Route path="/"  element={Home} />
+        <Route path="/login" element={Login} />
       </Routes>
     </Router>
   );
