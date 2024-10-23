@@ -20,7 +20,7 @@ public class LoginService : ILoginService
 
     public LoginStatus CheckPassword(string username, string password)
     {
-        var admin = _context.Admin.FirstOrDefault(a => a.UserName == username);
+        var admin = _context.Admins.FirstOrDefault(a => a.UserName == username);
         
         if (admin == null)
             return LoginStatus.IncorrectUsername;
@@ -41,7 +41,7 @@ public class LoginService : ILoginService
         if (!adminId.HasValue)
             return null;
 
-        return _context.Admin.FirstOrDefault(a => a.AdminId == adminId.Value);
+        return _context.Admins.FirstOrDefault(a => a.AdminId == adminId.Value);
     }
 
     public bool IsAdminLoggedIn()

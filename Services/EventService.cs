@@ -3,6 +3,7 @@ using StarterKit.Models.DTOs;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using StarterKit.Utils;
 
 namespace StarterKit.Services
 {
@@ -18,32 +19,34 @@ namespace StarterKit.Services
         public async Task<IEnumerable<EventDTO>> GetEventsAsync()
         {
             var events = await _context.Events
-                .Include(e => e.Reviews)
-                .Include(e => e.Attendees)
+                .Include(e => e.Event_Attendances) // Include Event_Attendances instead of Reviews
+                .Include(e => e.Event_Attendances.Select(ea => ea.User)) // Optionally include User if needed
                 .ToListAsync();
 
             return events.Select(e => new EventDTO
             {
-                Id = e.Id,
+                Id = e.EventId,
                 Title = e.Title,
                 Description = e.Description,
-                Date = e.Date,
+                Date = e.EventDate,
                 StartTime = e.StartTime,
                 EndTime = e.EndTime,
                 Location = e.Location,
-                Reviews = e.Reviews.Select(r => new ReviewDTO
+                Reviews = e.Event_Attendances.Select(ea => new ReviewDTO // Map Feedback to ReviewDTO
                 {
-                    Id = r.Id,
-                    EventId = r.EventId,
-                    UserId = r.UserId,
-                    Rating = r.Rating,
-                    Comment = r.Comment
+                    // Assuming ReviewDTO has properties similar to Feedback
+                    // Modify the properties based on your actual ReviewDTO structure
+                    Id = ea.Event_AttendanceId, // Use Event_AttendanceId as the Id
+                    EventId = e.EventId,
+                    UserId = ea.User.UserId, // Assuming User is included
+                    Rating = ea.Rating,
+                    Comment = ea.Feedback // Use Feedback for the Comment
                 }),
-                Attendees = e.Attendees.Select(a => new AttendeeDTO
+                Attendees = e.Event_Attendances.Select(a => new AttendeeDTO
                 {
-                    Id = a.Id,
-                    EventId = a.EventId,
-                    UserId = a.UserId
+                    Id = a.Event_AttendanceId,
+                    EventId = a.Event.EventId,
+                    UserId = a.User.UserId
                 })
             });
         }
@@ -54,10 +57,11 @@ namespace StarterKit.Services
             {
                 Title = eventCreateDTO.Title,
                 Description = eventCreateDTO.Description,
-                Date = eventCreateDTO.Date,
+                EventDate = eventCreateDTO.Date, // Make sure to use EventDate instead of Date
                 StartTime = eventCreateDTO.StartTime,
                 EndTime = eventCreateDTO.EndTime,
-                Location = eventCreateDTO.Location
+                Location = eventCreateDTO.Location,
+                Event_Attendances = new List<Event_Attendance>() // Initialize Event_Attendances
             };
 
             _context.Events.Add(@event);
@@ -65,10 +69,10 @@ namespace StarterKit.Services
 
             return new EventDTO
             {
-                Id = @event.Id,
+                Id = @event.EventId, // Make sure to use EventId instead of Id
                 Title = @event.Title,
                 Description = @event.Description,
-                Date = @event.Date,
+                Date = @event.EventDate, // Make sure to use EventDate instead of Date
                 StartTime = @event.StartTime,
                 EndTime = @event.EndTime,
                 Location = @event.Location
@@ -86,7 +90,7 @@ namespace StarterKit.Services
 
             @event.Title = eventUpdateDTO.Title;
             @event.Description = eventUpdateDTO.Description;
-            @event.Date = eventUpdateDTO.Date;
+            @event.EventDate = eventUpdateDTO.Date;
             @event.StartTime = eventUpdateDTO.StartTime;
             @event.EndTime = eventUpdateDTO.EndTime;
             @event.Location = eventUpdateDTO.Location;
@@ -95,10 +99,10 @@ namespace StarterKit.Services
 
             return new EventDTO
             {
-                Id = @event.Id,
+                Id = @event.EventId,
                 Title = @event.Title,
                 Description = @event.Description,
-                Date = @event.Date,
+                Date = @event.EventDate,
                 StartTime = @event.StartTime,
                 EndTime = @event.EndTime,
                 Location = @event.Location
@@ -123,17 +127,17 @@ namespace StarterKit.Services
             var review = new Review
             {
                 EventId = eventId,
-                UserId = reviewCreateDTO.UserId,
-                Rating = reviewCreateDTO.Rating,
-                Comment = reviewCreateDTO.Comment
+                UserId = reviewCreateDTO.UserId, // Ensure reviewCreateDTO has UserId property
+                Rating = reviewCreateDTO.Rating,   // Ensure reviewCreateDTO has Rating property
+                Comment = reviewCreateDTO.Comment    // Ensure reviewCreateDTO has Comment property
             };
 
-            _context.Reviews.Add(review);
+            _context.Reviews.Add(review); // Ensure the context is using Reviews
             await _context.SaveChangesAsync();
 
             return new ReviewDTO
             {
-                Id = review.Id,
+                Id = review.Id,                // Assuming Id is the primary key for Review
                 EventId = review.EventId,
                 UserId = review.UserId,
                 Rating = review.Rating,

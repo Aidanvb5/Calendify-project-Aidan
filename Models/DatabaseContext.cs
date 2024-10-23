@@ -5,17 +5,15 @@ namespace StarterKit.Models
 {
     public class DatabaseContext : DbContext
     {
-
         public DbSet<Admin> Admins { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<Attendance> Attendances { get; set; }
         public DbSet<Event_Attendance> EventAttendances { get; set; }
         public DbSet<Event> Events { get; set; }
-        public object Reviews { get; internal set; }
+        public DbSet<Review> Reviews { get; set; }
 
         public DatabaseContext(DbContextOptions<DatabaseContext> options) : base(options)
         {
-
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -34,7 +32,5 @@ namespace StarterKit.Models
             modelBuilder.Entity<Admin>()
                 .HasData(new Admin { AdminId = 5, Email = "admin5@example.com", UserName = "admin5", Password = EncryptionHelper.EncryptPassword("Whatisapassword?") });
         }
-
     }
-
 }
