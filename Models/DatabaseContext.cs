@@ -6,12 +6,12 @@ namespace StarterKit.Models
     public class DatabaseContext : DbContext
     {
 
-        public DbSet<Admin> Admin { get; set; }
-        public DbSet<User> User { get; set; }
-        public DbSet<Attendance> Attendance { get; set; }
-        public DbSet<Event_Attendance> Event_Attendance { get; set; }
-        public DbSet<Event> Event { get; set; }
-        public object Review { get; internal set; }
+        public DbSet<Admin> Admins { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<Attendance> Attendances { get; set; }
+        public DbSet<Event_Attendance> EventAttendances { get; set; }
+        public DbSet<Event> Events { get; set; }
+        public object Reviews { get; internal set; }
 
         public DatabaseContext(DbContextOptions<DatabaseContext> options) : base(options)
         {

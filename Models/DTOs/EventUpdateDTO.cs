@@ -2,7 +2,7 @@ using System;
 
 namespace StarterKit.Models.DTOs
 {
-    public class EventCreateDTO
+    public class EventUpdateDTO
     {
         public string Title { get; set; }
         public string Description { get; set; }

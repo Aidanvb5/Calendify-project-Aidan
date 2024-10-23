@@ -1,152 +1,67 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Threading.Tasks;
+using StarterKit.Services;
 using StarterKit.Models;
 using StarterKit.Models.DTOs;
-using StarterKit.Services;
 
-namespace StarterKit.Controllers;
-
-[Route("api/v1/[controller]")]
-[ApiController]
-public class EventController : ControllerBase
+namespace StarterKit.Controllers
 {
-    private readonly DatabaseContext _context;
-    private readonly ILoginService _loginService;
-
-    public EventController(DatabaseContext context, ILoginService loginService)
+    [ApiController]
+    [Route("api/[controller]")]
+    public class EventsController : ControllerBase
     {
-        _context = context;
-        _loginService = loginService;
-    }
+        private readonly IEventService _eventService;
+        private readonly ILoginService _loginService;
 
-    // GET: api/v1/Event
-    [HttpGet]
-    public IActionResult GetEvents()
-    {
-        var events = _context.Event
-            .Include(e => e.Event_Attendances)
-                .ThenInclude(ea => ea.User)
-            .ToList();
-        return Ok(events);
-    }
-
-    // GET: api/v1/Event/5
-    [HttpGet("{id}")]
-    public IActionResult GetEvent(int id)
-    {
-        var @event = _context.Event
-            .Include(e => e.Event_Attendances)
-                .ThenInclude(ea => ea.User)
-            .FirstOrDefault(e => e.EventId == id);
-
-        if (@event == null)
+        public EventsController(IEventService eventService, ILoginService loginService)
         {
-            return NotFound();
+            _eventService = eventService;
+            _loginService = loginService;
         }
 
-        return Ok(@event);
-    }
-
-    // POST: api/v1/Event
-    [HttpPost]
-    public IActionResult CreateEvent([FromBody] EventCreateDTO eventDto)
-    {
-        if (!IsAdminLoggedIn())
+        // GET: api/events
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<EventDTO>>> GetEvents()
         {
-            return Unauthorized("Admin login required");
+            var events = await _eventService.GetEventsAsync();
+            return Ok(events);
         }
 
-        var newEvent = new Event
+        // POST: api/events
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public async Task<ActionResult<EventDTO>> CreateEvent(EventCreateDTO eventCreateDTO)
         {
-            Title = eventDto.Title,
-            Description = eventDto.Description,
-            EventDate = eventDto.EventDate,
-            StartTime = eventDto.StartTime,
-            EndTime = eventDto.EndTime,
-            Location = eventDto.Location,
-            AdminApproval = true,
-            Event_Attendances = new List<Event_Attendance>()
-        };
-
-        _context.Event.Add(newEvent);
-        _context.SaveChanges();
-
-        return CreatedAtAction(nameof(GetEvent), new { id = newEvent.EventId }, newEvent);
-    }
-
-    // PUT: api/v1/Event/5
-    [HttpPut("{id}")]
-    public IActionResult UpdateEvent(int id, [FromBody] EventCreateDTO eventDto)
-    {
-        if (!IsAdminLoggedIn())
-        {
-            return Unauthorized("Admin login required");
+            var @event = await _eventService.CreateEventAsync(eventCreateDTO);
+            return CreatedAtAction(nameof(GetEvents), new { id = @event.Id }, @event);
         }
 
-        var @event = _context.Event.Find(id);
-        if (@event == null)
+        // PUT: api/events/5
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{id}")]
+        public async Task<ActionResult<EventDTO>> UpdateEvent(int id, EventUpdateDTO eventUpdateDTO)
         {
-            return NotFound();
+            var @event = await _eventService.UpdateEventAsync(id, eventUpdateDTO);
+            return Ok(@event);
         }
 
-        @event.Title = eventDto.Title;
-        @event.Description = eventDto.Description;
-        @event.EventDate = eventDto.EventDate;
-        @event.StartTime = eventDto.StartTime;
-        @event.EndTime = eventDto.EndTime;
-        @event.Location = eventDto.Location;
-
-        _context.SaveChanges();
-
-        return Ok(@event);
-    }
-
-    // DELETE: api/v1/Event/5
-    [HttpDelete("{id}")]
-    public IActionResult DeleteEvent(int id)
-    {
-        if (!IsAdminLoggedIn())
+        // DELETE: api/events/5
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> DeleteEvent(int id)
         {
-            return Unauthorized("Admin login required");
+            await _eventService.DeleteEventAsync(id);
+            return NoContent();
         }
 
-        var @event = _context.Event.Find(id);
-        if (@event == null)
+        // POST: api/events/5/reviews
+        [Authorize]
+        [HttpPost("{eventId}/reviews")]
+        public async Task<ActionResult<ReviewDTO>> CreateReview(int eventId, ReviewCreateDTO reviewCreateDTO)
         {
-            return NotFound();
+            var review = await _eventService.CreateReviewAsync(eventId, reviewCreateDTO);
+            return CreatedAtAction(nameof(GetEvents), new { id = review.Id }, review);
         }
-
-        _context.Event.Remove(@event);
-        _context.SaveChanges();
-
-        return NoContent();
-    }
-
-    // POST: api/v1/Event/5/review
-    [HttpPost("{id}/review")]
-    public IActionResult AddReview(int id, [FromBody] ReviewDTO reviewDto)
-    {
-        var @event = _context.Event.Find(id);
-        if (@event == null)
-        {
-            return NotFound();
-        }
-
-        var newReview = new Review
-        {
-            EventId = id,
-            Text = reviewDto.Text,
-            Rating = reviewDto.Rating
-        };
-
-        _context.Review.Add(newReview);
-        _context.SaveChanges();
-
-        return CreatedAtAction(nameof(GetEvent), new { id = id }, newReview);
-    }
-
-    private bool IsAdminLoggedIn()
-    {
-        return _loginService.IsAdminLoggedIn();
     }
 }
