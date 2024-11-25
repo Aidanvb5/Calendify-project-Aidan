@@ -5,6 +5,6 @@ namespace StarterKit.Utils
         Success,
         IncorrectUsername,
         IncorrectPassword,
-        UnauthorizedRole
+        Unknown
     }
 }

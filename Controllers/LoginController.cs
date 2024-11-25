@@ -10,38 +10,40 @@ namespace StarterKit.Controllers
     public class LoginController : ControllerBase
     {
         private readonly ILoginService _loginService;
+        private readonly ILogger<LoginController> _logger;
 
-        public LoginController(ILoginService loginService)
+        public LoginController(
+            ILoginService loginService, 
+            ILogger<LoginController> logger)
         {
             _loginService = loginService;
+            _logger = logger;
         }
 
-        [HttpPost("admin")]
-        public IActionResult AdminLogin([FromBody] LoginDTO loginDto)
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] LoginDTO loginDto, [FromQuery] bool isAdminLogin = false)
         {
-            var status = _loginService.CheckPassword(loginDto.Username, loginDto.Password, "admin");
-            
-            return status switch
+            try 
             {
-                LoginStatus.Success => Ok(new { message = "Admin login successful" }),
-                LoginStatus.IncorrectUsername => BadRequest(new { message = "Admin username not found" }),
-                LoginStatus.IncorrectPassword => BadRequest(new { message = "Incorrect admin password" }),
-                _ => BadRequest(new { message = "Admin login failed" })
-            };
-        }
-
-        [HttpPost("user")]
-        public IActionResult UserLogin([FromBody] LoginDTO loginDto)
-        {
-            var status = _loginService.CheckPassword(loginDto.Username, loginDto.Password, "user");
-            
-            return status switch
+                var status = _loginService.Login(loginDto.Email, loginDto.Password, isAdminLogin);
+                
+                return status switch
+                {
+                    LoginStatus.Success => Ok(new 
+                    { 
+                        message = "Login successful",
+                        isAdmin = _loginService.IsAdmin()
+                    }),
+                    LoginStatus.IncorrectUsername => BadRequest(new { message = "Email not found" }),
+                    LoginStatus.IncorrectPassword => BadRequest(new { message = "Incorrect password" }),
+                    _ => BadRequest(new { message = "Login failed" })
+                };
+            }
+            catch (Exception ex)
             {
-                LoginStatus.Success => Ok(new { message = "User login successful" }),
-                LoginStatus.IncorrectUsername => BadRequest(new { message = "User email not found" }),
-                LoginStatus.IncorrectPassword => BadRequest(new { message = "Incorrect user password" }),
-                _ => BadRequest(new { message = "User login failed" })
-            };
+                _logger.LogError(ex, "Login error");
+                return StatusCode(500, new { message = "An unexpected error occurred" });
+            }
         }
 
         [HttpPost("register")]
@@ -51,10 +53,14 @@ namespace StarterKit.Controllers
             {
                 var user = await _loginService.RegisterUser(registrationDto);
                 return CreatedAtAction(nameof(RegisterUser), new { id = user.UserId }, 
-                    new { message = "User registered successfully", userId = user.UserId });
+                    new { 
+                        message = "User registered successfully", 
+                        userId = user.UserId 
+                    });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Registration error");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -62,34 +68,25 @@ namespace StarterKit.Controllers
         [HttpGet("check-session")]
         public IActionResult CheckSession()
         {
-            if (_loginService.IsAdminLoggedIn())
-            {
-                var admin = _loginService.GetLoggedInAdmin();
-                return Ok(new 
-                { 
-                    isLoggedIn = true, 
-                    role = "Admin", 
-                    name = admin?.UserName 
-                });
-            }
-            else if (_loginService.IsUserLoggedIn())
+            if (_loginService.IsLoggedIn())
             {
                 var user = _loginService.GetLoggedInUser();
                 return Ok(new 
                 { 
                     isLoggedIn = true, 
-                    role = "User", 
-                    name = $"{user?.FirstName} {user?.LastName}" 
+                    isAdmin = _loginService.IsAdmin(),
+                    name = user != null ? $"{user.FirstName} {user.LastName}" : null,
+                    email = user?.Email
                 });
             }
 
             return Ok(new 
             { 
                 isLoggedIn = false, 
-                role = (string)null, 
-                name = (string)null 
-            }
-            );
+                isAdmin = false,
+                name = (string)null, 
+                email = (string)null 
+            });
         }
 
         [HttpPost("logout")]

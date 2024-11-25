@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StarterKit.Models;
 using StarterKit.Services;
+using Microsoft.Extensions.Logging;
 
 namespace StarterKit
 {
@@ -10,6 +11,11 @@ namespace StarterKit
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // Add logging
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
+            builder.Logging.AddDebug();
+
             builder.Services.AddControllersWithViews();
             builder.Services.AddDistributedMemoryCache();
             
@@ -17,14 +23,18 @@ namespace StarterKit
 
             builder.Services.AddSession(options => 
             {
-                options.IdleTimeout = TimeSpan.FromMinutes(30); // Changed from 10 seconds to 30 minutes
+                options.IdleTimeout = TimeSpan.FromMinutes(30);
                 options.Cookie.HttpOnly = true; 
                 options.Cookie.IsEssential = true; 
             });
 
+            // Register services
             builder.Services.AddScoped<ILoginService, LoginService>();
             builder.Services.AddScoped<IEventService, EventService>();
+            //builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+            //builder.Services.AddScoped<IUserRepository, UserRepository>();
 
+            // Database context
             builder.Services.AddDbContext<DatabaseContext>(
                 options => options.UseSqlite(builder.Configuration.GetConnectionString("SqlLiteDb")));
 
@@ -46,6 +56,13 @@ namespace StarterKit
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
+
+            // Ensure database is created
+            using (var scope = app.Services.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+                context.Database.EnsureCreated();
+            }
 
             app.Run();
         }
