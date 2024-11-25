@@ -218,5 +218,28 @@ namespace StarterKit.Services
                     UserName = ea.User.FirstName + " " + ea.User.LastName
                  }).ToListAsync();
         }
+
+        public async Task RemoveEventAttendanceAsync(int eventId, int userId)
+        {
+            // Validate event exists
+            var @event = await _context.Events.FindAsync(eventId)
+                ?? throw new EventNotFoundException(eventId);
+
+            // Validate user exists
+            var user = await _context.Users.FindAsync(userId)
+                ?? throw new UserNotAuthorizedException("User not found");
+
+            // Find the specific event attendance
+            var eventAttendance = await _context.Event_Attendances
+                .FirstOrDefaultAsync(ea => ea.EventId == eventId && ea.UserId == userId);
+
+            if (eventAttendance == null)
+                throw new EventAttendanceException("User is not attending this event");
+
+            // Remove the event attendance
+            _context.Event_Attendances.Remove(eventAttendance);
+            await _context.SaveChangesAsync();
+        }
+
     }
 }
