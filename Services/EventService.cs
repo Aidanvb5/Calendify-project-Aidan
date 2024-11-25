@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using StarterKit.Models;
 using StarterKit.Models.DTOs;
 using StarterKit.Utils;
+using System;
 
 namespace StarterKit.Services
 {
@@ -26,7 +27,8 @@ namespace StarterKit.Services
                     Id = e.EventId,
                     Title = e.Title,
                     Description = e.Description,
-                    Date = e.EventDate,
+                    // Convert DateTime to DateOnly
+                    Date = DateOnly.FromDateTime(e.EventDate),
                     StartTime = e.StartTime,
                     EndTime = e.EndTime,
                     Location = e.Location,
@@ -62,7 +64,8 @@ namespace StarterKit.Services
                 Id = @event.EventId,
                 Title = @event.Title,
                 Description = @event.Description,
-                Date = @event.EventDate,
+                // Convert DateTime to DateOnly
+                Date = DateOnly.FromDateTime(@event.EventDate),
                 StartTime = @event.StartTime,
                 EndTime = @event.EndTime,
                 Location = @event.Location,
@@ -144,7 +147,7 @@ namespace StarterKit.Services
                 throw new InvalidReviewException("Rating must be between 1 and 5");
 
             // Check if user has attended the event
-            var hasAttended = await _context.Event_Attendances
+            var hasAttended = await _context.EventAttendances
                 .AnyAsync(ea => ea.EventId == eventId && ea.User.UserId == user.UserId);
 
             if (!hasAttended)
@@ -179,11 +182,11 @@ namespace StarterKit.Services
                 ?? throw new EventNotFoundException(attendEventDto.EventId);
 
             // Check event availability based on date and time
-            if (@event.EventDate < DateOnly.FromDateTime(DateTime.Today))
+            if (@event.EventDate.Date < DateTime.Today.Date)
                 throw new EventAttendanceException("Cannot attend past events");
 
             // Check if user is already attending
-            var existingAttendance = await _context.Event_Attendances
+            var existingAttendance = await _context.EventAttendances
                 .FirstOrDefaultAsync(ea => ea.EventId == attendEventDto.EventId && ea.User.UserId == user.UserId);
 
             if (existingAttendance != null)
@@ -198,7 +201,7 @@ namespace StarterKit.Services
                 Feedback = ""  // Default empty feedback
             };
 
-            _context.Event_Attendances.Add(eventAttendance);
+            _context.EventAttendances.Add(eventAttendance);
             await _context.SaveChangesAsync();
 
             return await GetEventByIdAsync(attendEventDto.EventId);
@@ -207,10 +210,10 @@ namespace StarterKit.Services
         public async Task<IEnumerable<AttendeeDTO>> GetEventAttendeesAsync(int eventId)
         {
             // Validate event exists first
-            await _context.Events.FindAsync(eventId)
+            _ = await _context.Events.FindAsync(eventId)
                 ?? throw new EventNotFoundException(eventId);
 
-            return await _context.Event_Attendances
+            return await _context.EventAttendances
                 .Where(ea => ea.EventId == eventId)
                 .Select(ea => new AttendeeDTO
                 {
@@ -229,15 +232,22 @@ namespace StarterKit.Services
             var user = await _context.Users.FindAsync(userId)
                 ?? throw new UserNotAuthorizedException("User not found");
 
+            // Check if the logged-in user is removing their own attendance or is an admin
+            var loggedInUser = _loginService.GetLoggedInUser();
+            var isAdmin = _loginService.IsAdminLoggedIn();
+
+            if (loggedInUser?.UserId != userId && !isAdmin)
+                throw new UserNotAuthorizedException("You are not authorized to remove this attendance");
+
             // Find the specific event attendance
-            var eventAttendance = await _context.Event_Attendances
+            var eventAttendance = await _context.EventAttendances
                 .FirstOrDefaultAsync(ea => ea.EventId == eventId && ea.UserId == userId);
 
             if (eventAttendance == null)
                 throw new EventAttendanceException("User is not attending this event");
 
             // Remove the event attendance
-            _context.Event_Attendances.Remove(eventAttendance);
+            _context.EventAttendances.Remove(eventAttendance);
             await _context.SaveChangesAsync();
         }
 
