@@ -4,10 +4,6 @@ using StarterKit.Utils;
 
 namespace StarterKit.Services;
 
-public enum LoginStatus { IncorrectPassword, IncorrectUsername, Success }
-public enum UserRole { Admin, User }
-
-// Services/LoginService.cs
 public class LoginService : ILoginService
 {
     private readonly DatabaseContext _context;
@@ -38,22 +34,27 @@ public class LoginService : ILoginService
         }
         else
         {
-            var user = _context.Users.FirstOrDefault(u => u.Email == username);
-            if (user == null)
-                return LoginStatus.IncorrectUsername;
-
-            string hashedPassword = EncryptionHelper.EncryptPassword(password);
-            if (user.Password != hashedPassword)
-                return LoginStatus.IncorrectPassword;
-
-            // Set user session
-            _httpContextAccessor.HttpContext?.Session.SetInt32("UserId", user.UserId);
-            _httpContextAccessor.HttpContext?.Session.SetString("Role", "User");
-            return LoginStatus.Success;
+            return CheckUserPassword(username, password);
         }
     }
 
-    public async Task<User> RegisterUser(UserLoginDTO userDTO)
+    public LoginStatus CheckUserPassword(string email, string password)
+    {
+        var user = _context.Users.FirstOrDefault(u => u.Email == email);
+        if (user == null)
+            return LoginStatus.IncorrectUsername;
+
+        string hashedPassword = EncryptionHelper.EncryptPassword(password);
+        if (user.Password != hashedPassword)
+            return LoginStatus.IncorrectPassword;
+
+        // Set user session
+        _httpContextAccessor.HttpContext?.Session.SetInt32("UserId", user.UserId);
+        _httpContextAccessor.HttpContext?.Session.SetString("Role", "User");
+        return LoginStatus.Success;
+    }
+
+    public async Task<User> RegisterUser(UserRegistrationDTO userDTO)
     {
         // Check if user already exists
         if (_context.Users.Any(u => u.Email == userDTO.Email))
@@ -88,11 +89,11 @@ public class LoginService : ILoginService
 
     public User? GetLoggedInUser()
     {
-        var userI = _httpContextAccessor.HttpContext?.Session.GetInt32("UserId");
-        if (!userI.HasValue)
+        var userId = _httpContextAccessor.HttpContext?.Session.GetInt32("UserId");
+        if (!userId.HasValue)
             return null;
 
-        return _context.Users.FirstOrDefault(u => u.UserId == userI.Value);
+        return _context.Users.FirstOrDefault(u => u.UserId == userId.Value);
     }
 
     public bool IsAdminLoggedIn()

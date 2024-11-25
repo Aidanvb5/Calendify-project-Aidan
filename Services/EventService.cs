@@ -1,8 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using StarterKit.Models;
 using StarterKit.Models.DTOs;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using StarterKit.Utils;
 
 namespace StarterKit.Services
@@ -10,92 +8,54 @@ namespace StarterKit.Services
     public class EventService : IEventService
     {
         private readonly DatabaseContext _context;
+        private readonly ILoginService _loginService;
 
-        public EventService(DatabaseContext context)
+        public EventService(DatabaseContext context, ILoginService loginService)
         {
             _context = context;
+            _loginService = loginService;
         }
 
         public async Task<IEnumerable<EventDTO>> GetEventsAsync()
         {
-            var events = await _context.Events
-                .Include(e => e.Event_Attendances) // Include Event_Attendances instead of Reviews
-                .Include(e => e.Event_Attendances.Select(ea => ea.User)) // Optionally include User if needed
-                .ToListAsync();
-
-            return events.Select(e => new EventDTO
-            {
-                Id = e.EventId,
-                Title = e.Title,
-                Description = e.Description,
-                Date = e.EventDate,
-                StartTime = e.StartTime,
-                EndTime = e.EndTime,
-                Location = e.Location,
-                Reviews = e.Event_Attendances.Select(ea => new ReviewDTO // Map Feedback to ReviewDTO
+            return await _context.Events
+                .Include(e => e.Event_Attendances)
+                    .ThenInclude(ea => ea.User)
+                .Select(e => new EventDTO
                 {
-                    // Assuming ReviewDTO has properties similar to Feedback
-                    // Modify the properties based on your actual ReviewDTO structure
-                    Id = ea.Event_AttendanceId, // Use Event_AttendanceId as the Id
-                    EventId = e.EventId,
-                    UserId = ea.User.UserId, // Assuming User is included
-                    Rating = ea.Rating,
-                    Comment = ea.Feedback // Use Feedback for the Comment
-                }),
-                Attendees = e.Event_Attendances.Select(a => new AttendeeDTO
-                {
-                    Id = a.Event_AttendanceId,
-                    EventId = a.Event.EventId,
-                    UserId = a.User.UserId
+                    Id = e.EventId,
+                    Title = e.Title,
+                    Description = e.Description,
+                    Date = e.EventDate,
+                    StartTime = e.StartTime,
+                    EndTime = e.EndTime,
+                    Location = e.Location,
+                    Reviews = _context.Reviews
+                        .Where(r => r.EventId == e.EventId)
+                        .Select(r => new ReviewDTO
+                        {
+                            Id = r.Id,
+                            Comment = r.Comment,
+                            Rating = r.Rating
+                        }).ToList(),
+                    Attendees = e.Event_Attendances.Select(ea => new AttendeeDTO
+                    {
+                        UserId = ea.User.UserId,
+                        UserName = ea.User.FirstName + " " + ea.User.LastName
+                    }).ToList()
                 })
-            });
+                .ToListAsync();
         }
 
-        public async Task<EventDTO> CreateEventAsync(EventCreateDTO eventCreateDTO)
+        public async Task<EventDTO> GetEventByIdAsync(int eventId)
         {
-            var @event = new Event
-            {
-                Title = eventCreateDTO.Title,
-                Description = eventCreateDTO.Description,
-                EventDate = eventCreateDTO.Date, // Make sure to use EventDate instead of Date
-                StartTime = eventCreateDTO.StartTime,
-                EndTime = eventCreateDTO.EndTime,
-                Location = eventCreateDTO.Location,
-                Event_Attendances = new List<Event_Attendance>() // Initialize Event_Attendances
-            };
-
-            _context.Events.Add(@event);
-            await _context.SaveChangesAsync();
-
-            return new EventDTO
-            {
-                Id = @event.EventId, // Make sure to use EventId instead of Id
-                Title = @event.Title,
-                Description = @event.Description,
-                Date = @event.EventDate, // Make sure to use EventDate instead of Date
-                StartTime = @event.StartTime,
-                EndTime = @event.EndTime,
-                Location = @event.Location
-            };
-        }
-
-        public async Task<EventDTO> UpdateEventAsync(int id, EventUpdateDTO eventUpdateDTO)
-        {
-            var @event = await _context.Events.FindAsync(id);
+            var @event = await _context.Events
+                .Include(e => e.Event_Attendances)
+                    .ThenInclude(ea => ea.User)
+                .FirstOrDefaultAsync(e => e.EventId == eventId);
 
             if (@event == null)
-            {
-                throw new NotFoundException("Event not found");
-            }
-
-            @event.Title = eventUpdateDTO.Title;
-            @event.Description = eventUpdateDTO.Description;
-            @event.EventDate = eventUpdateDTO.Date;
-            @event.StartTime = eventUpdateDTO.StartTime;
-            @event.EndTime = eventUpdateDTO.EndTime;
-            @event.Location = eventUpdateDTO.Location;
-
-            await _context.SaveChangesAsync();
+                throw new EventNotFoundException(eventId);
 
             return new EventDTO
             {
@@ -105,18 +65,65 @@ namespace StarterKit.Services
                 Date = @event.EventDate,
                 StartTime = @event.StartTime,
                 EndTime = @event.EndTime,
-                Location = @event.Location
+                Location = @event.Location,
+                Reviews = await _context.Reviews
+                    .Where(r => r.EventId == eventId)
+                    .Select(r => new ReviewDTO
+                    {
+                        Id = r.Id,
+                        Comment = r.Comment,
+                        Rating = r.Rating
+                    }).ToListAsync(),
+                Attendees = @event.Event_Attendances.Select(ea => new AttendeeDTO
+                {
+                    UserId = ea.User.UserId,
+                    UserName = ea.User.FirstName + " " + ea.User.LastName
+                }).ToList()
             };
         }
 
-        public async Task DeleteEventAsync(int id)
+        public async Task<EventDTO> CreateEventAsync(EventCreateDTO eventCreateDTO)
         {
-            var @event = await _context.Events.FindAsync(id);
-
-            if (@event == null)
+            var newEvent = new Event
             {
-                throw new NotFoundException("Event not found");
-            }
+                Title = eventCreateDTO.Title,
+                Description = eventCreateDTO.Description,
+                EventDate = eventCreateDTO.Date,
+                StartTime = eventCreateDTO.StartTime,
+                EndTime = eventCreateDTO.EndTime,
+                Location = eventCreateDTO.Location,
+                Event_Attendances = new List<Event_Attendance>()
+            };
+
+            _context.Events.Add(newEvent);
+            await _context.SaveChangesAsync();
+
+            return await GetEventByIdAsync(newEvent.EventId);
+        }
+
+        public async Task<EventDTO> UpdateEventAsync(int eventId, EventUpdateDTO eventUpdateDTO)
+        {
+            var existingEvent = await _context.Events.FindAsync(eventId);
+            if (existingEvent == null)
+                throw new EventNotFoundException(eventId);
+
+            existingEvent.Title = eventUpdateDTO.Title;
+            existingEvent.Description = eventUpdateDTO.Description;
+            existingEvent.EventDate = eventUpdateDTO.Date;
+            existingEvent.StartTime = eventUpdateDTO.StartTime;
+            existingEvent.EndTime = eventUpdateDTO.EndTime;
+            existingEvent.Location = eventUpdateDTO.Location;
+
+            await _context.SaveChangesAsync();
+
+            return await GetEventByIdAsync(eventId);
+        }
+
+        public async Task DeleteEventAsync(int eventId)
+        {
+            var @event = await _context.Events.FindAsync(eventId);
+            if (@event == null)
+                throw new EventNotFoundException(eventId);
 
             _context.Events.Remove(@event);
             await _context.SaveChangesAsync();
@@ -124,25 +131,92 @@ namespace StarterKit.Services
 
         public async Task<ReviewDTO> CreateReviewAsync(int eventId, ReviewCreateDTO reviewCreateDTO)
         {
+            // Validate event exists
+            var @event = await _context.Events.FindAsync(eventId) 
+                ?? throw new EventNotFoundException(eventId);
+
+            // Check if user is logged in
+            var user = _loginService.GetLoggedInUser() 
+                ?? throw new UserNotAuthorizedException("User must be logged in to create a review");
+
+            // Validate review
+            if (reviewCreateDTO.Rating < 1 || reviewCreateDTO.Rating > 5)
+                throw new InvalidReviewException("Rating must be between 1 and 5");
+
+            // Check if user has attended the event
+            var hasAttended = await _context.Event_Attendances
+                .AnyAsync(ea => ea.EventId == eventId && ea.User.UserId == user.UserId);
+
+            if (!hasAttended)
+                throw new EventAttendanceException("Only event attendees can leave a review");
+
             var review = new Review
             {
                 EventId = eventId,
-                UserId = reviewCreateDTO.UserId, // Ensure reviewCreateDTO has UserId property
-                Rating = reviewCreateDTO.Rating,   // Ensure reviewCreateDTO has Rating property
-                Comment = reviewCreateDTO.Comment    // Ensure reviewCreateDTO has Comment property
+                UserId = user.UserId,
+                Comment = reviewCreateDTO.Comment,
+                Rating = reviewCreateDTO.Rating,
+                CreatedDate = DateTime.UtcNow
             };
 
-            _context.Reviews.Add(review); // Ensure the context is using Reviews
+            _context.Reviews.Add(review);
             await _context.SaveChangesAsync();
 
             return new ReviewDTO
             {
-                Id = review.Id,                // Assuming Id is the primary key for Review
-                EventId = review.EventId,
-                UserId = review.UserId,
-                Rating = review.Rating,
-                Comment = review.Comment
+                Id = review.Id,
+                Comment = review.Comment,
+                Rating = review.Rating
             };
+        }
+
+        public async Task<EventDTO> AttendEventAsync(AttendEventDTO attendEventDto)
+        {
+            var user = _loginService.GetLoggedInUser()
+                ?? throw new UserNotAuthorizedException("User must be logged in to attend an event");
+
+            var @event = await _context.Events.FindAsync(attendEventDto.EventId)
+                ?? throw new EventNotFoundException(attendEventDto.EventId);
+
+            // Check event availability based on date and time
+            if (@event.EventDate < DateOnly.FromDateTime(DateTime.Today))
+                throw new EventAttendanceException("Cannot attend past events");
+
+            // Check if user is already attending
+            var existingAttendance = await _context.Event_Attendances
+                .FirstOrDefaultAsync(ea => ea.EventId == attendEventDto.EventId && ea.User.UserId == user.UserId);
+
+            if (existingAttendance != null)
+                throw new EventAttendanceException("User is already attending this event");
+
+            var eventAttendance = new Event_Attendance
+            {
+                EventId = attendEventDto.EventId,
+                UserId = user.UserId,
+                User = user,
+                Event = @event,
+                Feedback = ""  // Default empty feedback
+            };
+
+            _context.Event_Attendances.Add(eventAttendance);
+            await _context.SaveChangesAsync();
+
+            return await GetEventByIdAsync(attendEventDto.EventId);
+        }
+
+        public async Task<IEnumerable<AttendeeDTO>> GetEventAttendeesAsync(int eventId)
+        {
+            // Validate event exists first
+            await _context.Events.FindAsync(eventId)
+                ?? throw new EventNotFoundException(eventId);
+
+            return await _context.Event_Attendances
+                .Where(ea => ea.EventId == eventId)
+                .Select(ea => new AttendeeDTO
+                {
+                    UserId = ea.User.UserId,
+                    UserName = ea.User.FirstName + " " + ea.User.LastName
+                 }).ToListAsync();
         }
     }
 }

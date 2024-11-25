@@ -1,64 +1,102 @@
-// Controllers/LoginController.cs
 using Microsoft.AspNetCore.Mvc;
+using StarterKit.Models.DTOs;
 using StarterKit.Services;
+using StarterKit.Utils;
 
-namespace StarterKit.Controllers;
-
-[Route("api/v1/Login")]
-[ApiController]
-public class LoginController : ControllerBase
+namespace StarterKit.Controllers
 {
-    private readonly ILoginService _loginService;
-
-    public LoginController(ILoginService loginService)
+    [ApiController]
+    [Route("api/[controller]")]
+    public class LoginController : ControllerBase
     {
-        _loginService = loginService;
-    }
+        private readonly ILoginService _loginService;
 
-    [HttpPost("Login")]
-    public IActionResult Login([FromBody] LoginBody loginBody)
-    {
-        if (string.IsNullOrEmpty(loginBody.Username) || string.IsNullOrEmpty(loginBody.Password))
-            return BadRequest("Username and password are required");
-
-        var status = _loginService.CheckPassword(loginBody.Username, loginBody.Password);
-        
-        switch (status)
+        public LoginController(ILoginService loginService)
         {
-            case LoginStatus.Success:
-                return Ok(new { message = "Successfully logged in" });
-            case LoginStatus.IncorrectUsername:
-                return Unauthorized("Username not found");
-            case LoginStatus.IncorrectPassword:
-                return Unauthorized("Incorrect password");
-            default:
-                return StatusCode(500, "An unexpected error occurred");
+            _loginService = loginService;
+        }
+
+        [HttpPost("admin")]
+        public IActionResult AdminLogin([FromBody] LoginDTO loginDto)
+        {
+            var status = _loginService.CheckPassword(loginDto.Username, loginDto.Password, "admin");
+            
+            return status switch
+            {
+                LoginStatus.Success => Ok(new { message = "Admin login successful" }),
+                LoginStatus.IncorrectUsername => BadRequest(new { message = "Admin username not found" }),
+                LoginStatus.IncorrectPassword => BadRequest(new { message = "Incorrect admin password" }),
+                _ => BadRequest(new { message = "Admin login failed" })
+            };
+        }
+
+        [HttpPost("user")]
+        public IActionResult UserLogin([FromBody] LoginDTO loginDto)
+        {
+            var status = _loginService.CheckPassword(loginDto.Username, loginDto.Password, "user");
+            
+            return status switch
+            {
+                LoginStatus.Success => Ok(new { message = "User login successful" }),
+                LoginStatus.IncorrectUsername => BadRequest(new { message = "User email not found" }),
+                LoginStatus.IncorrectPassword => BadRequest(new { message = "Incorrect user password" }),
+                _ => BadRequest(new { message = "User login failed" })
+            };
+        }
+
+        [HttpPost("register")]
+        public async Task<IActionResult> RegisterUser([FromBody] UserRegistrationDTO registrationDto)
+        {
+            try
+            {
+                var user = await _loginService.RegisterUser(registrationDto);
+                return CreatedAtAction(nameof(RegisterUser), new { id = user.UserId }, 
+                    new { message = "User registered successfully", userId = user.UserId });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("check-session")]
+        public IActionResult CheckSession()
+        {
+            if (_loginService.IsAdminLoggedIn())
+            {
+                var admin = _loginService.GetLoggedInAdmin();
+                return Ok(new 
+                { 
+                    isLoggedIn = true, 
+                    role = "Admin", 
+                    name = admin?.UserName 
+                });
+            }
+            else if (_loginService.IsUserLoggedIn())
+            {
+                var user = _loginService.GetLoggedInUser();
+                return Ok(new 
+                { 
+                    isLoggedIn = true, 
+                    role = "User", 
+                    name = $"{user?.FirstName} {user?.LastName}" 
+                });
+            }
+
+            return Ok(new 
+            { 
+                isLoggedIn = false, 
+                role = (string)null, 
+                name = (string)null 
+            }
+            );
+        }
+
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            _loginService.Logout();
+            return Ok(new { message = "Logged out successfully" });
         }
     }
-
-    [HttpGet("Status")]
-    public IActionResult GetLoginStatus()
-    {
-        var admin = _loginService.GetLoggedInAdmin();
-        if (admin == null)
-            return Ok(new { isLoggedIn = false });
-
-        return Ok(new { 
-            isLoggedIn = true,
-            username = admin.UserName
-        });
-    }
-
-    [HttpGet("Logout")]
-    public IActionResult Logout()
-    {
-        _loginService.Logout();
-        return Ok(new { message = "Successfully logged out" });
-    }
-}
-
-public class LoginBody
-{
-    public string? Username { get; set; }
-    public string? Password { get; set; }
 }

@@ -1,9 +1,7 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using System.Threading.Tasks;
-using StarterKit.Services;
-using StarterKit.Models;
+using Microsoft.AspNetCore.Mvc;
 using StarterKit.Models.DTOs;
+using StarterKit.Services;
 
 namespace StarterKit.Controllers
 {
@@ -12,15 +10,12 @@ namespace StarterKit.Controllers
     public class EventsController : ControllerBase
     {
         private readonly IEventService _eventService;
-        private readonly ILoginService _loginService;
 
-        public EventsController(IEventService eventService, ILoginService loginService)
+        public EventsController(IEventService eventService)
         {
             _eventService = eventService;
-            _loginService = loginService;
         }
 
-        // GET: api/events
         [HttpGet]
         public async Task<ActionResult<IEnumerable<EventDTO>>> GetEvents()
         {
@@ -28,40 +23,135 @@ namespace StarterKit.Controllers
             return Ok(events);
         }
 
-        // POST: api/events
+        [HttpGet("{eventId}")]
+        public async Task<ActionResult<EventDTO>> GetEventById(int eventId)
+        {
+            try
+            {
+                var @event = await _eventService.GetEventByIdAsync(eventId);
+                return Ok(@event);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
         [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<ActionResult<EventDTO>> CreateEvent(EventCreateDTO eventCreateDTO)
+        public async Task<ActionResult<EventDTO>> CreateEvent([FromBody] EventCreateDTO eventCreateDto)
         {
-            var @event = await _eventService.CreateEventAsync(eventCreateDTO);
-            return CreatedAtAction(nameof(GetEvents), new { id = @event.Id }, @event);
+            try
+            {
+                var createdEvent = await _eventService.CreateEventAsync(eventCreateDto);
+                return CreatedAtAction(nameof(GetEventById), new { eventId = createdEvent.Id }, createdEvent);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
-        // PUT: api/events/5
         [Authorize(Roles = "Admin")]
-        [HttpPut("{id}")]
-        public async Task<ActionResult<EventDTO>> UpdateEvent(int id, EventUpdateDTO eventUpdateDTO)
+        [HttpPut("{eventId}")]
+        public async Task<ActionResult<EventDTO>> UpdateEvent(int eventId, [FromBody] EventUpdateDTO eventUpdateDto)
         {
-            var @event = await _eventService.UpdateEventAsync(id, eventUpdateDTO);
-            return Ok(@event);
+            try
+            {
+                var updatedEvent = await _eventService.UpdateEventAsync(eventId, eventUpdateDto);
+                return Ok(updatedEvent);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
         }
 
-        // DELETE: api/events/5
         [Authorize(Roles = "Admin")]
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> DeleteEvent(int id)
+        [HttpDelete("{eventId}")]
+        public async Task<IActionResult> DeleteEvent(int eventId)
         {
-            await _eventService.DeleteEventAsync(id);
-            return NoContent();
+            try
+            {
+                await _eventService.DeleteEventAsync(eventId);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
         }
 
-        // POST: api/events/5/reviews
         [Authorize]
         [HttpPost("{eventId}/reviews")]
-        public async Task<ActionResult<ReviewDTO>> CreateReview(int eventId, ReviewCreateDTO reviewCreateDTO)
+        public async Task<ActionResult<ReviewDTO>> CreateReview(int eventId, [FromBody] ReviewCreateDTO reviewCreateDto)
         {
-            var review = await _eventService.CreateReviewAsync(eventId, reviewCreateDTO);
-            return CreatedAtAction(nameof(GetEvents), new { id = review.Id }, review);
+            try
+            {
+                var review = await _eventService.CreateReviewAsync(eventId, reviewCreateDto);
+                return CreatedAtAction(nameof(GetEventById), new { eventId }, review);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpPost("{eventId}/attend")]
+        public async Task<ActionResult<EventDTO>> AttendEvent(int eventId)
+        {
+            try
+            {
+                var attendEventDto = new AttendEventDTO { EventId = eventId };
+                var updatedEvent = await _eventService.AttendEventAsync(attendEventDto);
+                return Ok(updatedEvent);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("{eventId}/attendees")]
+        public async Task<ActionResult<IEnumerable<AttendeeDTO>>> GetEventAttendees(int eventId)
+        {
+            try
+            {
+                var attendees = await _eventService.GetEventAttendeesAsync(eventId);
+                return Ok(attendees);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpDelete("{eventId}/attendance")]
+        public async Task<IActionResult> RemoveEventAttendance(int eventId)
+        {
+            try
+            {
+                var user = HttpContext.User;
+                var userId = int.Parse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+                
+                await _eventService.RemoveEventAttendanceAsync(eventId, userId);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }
