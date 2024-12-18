@@ -11,6 +11,9 @@ namespace StarterKit
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // Specify the URLs for the application (only HTTP)
+            builder.WebHost.UseUrls("http://localhost:3000");
+
             // Add logging
             builder.Logging.ClearProviders();
             builder.Logging.AddConsole();
@@ -31,8 +34,6 @@ namespace StarterKit
             // Register services
             builder.Services.AddScoped<ILoginService, LoginService>();
             builder.Services.AddScoped<IEventService, EventService>();
-            //builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
-            //builder.Services.AddScoped<IUserRepository, UserRepository>();
 
             // Database context
             builder.Services.AddDbContext<DatabaseContext>(
@@ -47,7 +48,8 @@ namespace StarterKit
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
+            // Remove HTTPS redirection
+            // app.UseHttpsRedirection(); // Comment this line if you want to avoid HTTPS
             app.UseStaticFiles();
             app.UseRouting();
             app.UseAuthorization();

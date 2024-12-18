@@ -13,15 +13,15 @@ export default function Home() {
 
       <p>
         The code base of the starter kit contains the following:
-        <ul>
-          <li>Backend with .NET (C#)</li>
-          <li>Frontend using React with Typescript</li>
-          <li>Webpack with hot module reloading enabled</li>
-          <li>A database using Sqlite, we might change this to Postgres later</li>
-          <li>A sample database model for the two cases using Entity Framework core</li>
-          <li>CSS stylesheet using Bootstrap</li>
-        </ul>
       </p>
+      <ul>
+        <li>Backend with .NET (C#)</li>
+        <li>Frontend using React with Typescript</li>
+        <li>Webpack with hot module reloading enabled</li>
+        <li>A database using Sqlite, we might change this to Postgres later</li>
+        <li>A sample database model for the two cases using Entity Framework core</li>
+        <li>CSS stylesheet using Bootstrap</li>
+      </ul>
 
       <h2>Choosing a practical case</h2>
       <p>

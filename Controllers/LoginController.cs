@@ -27,17 +27,28 @@ namespace StarterKit.Controllers
             {
                 var status = _loginService.Login(loginDto.Email, loginDto.Password, isAdminLogin);
                 
-                return status switch
+                if (status == LoginStatus.Success)
                 {
-                    LoginStatus.Success => Ok(new 
+                    var user = _loginService.GetLoggedInUser ();
+                    return Ok(new 
                     { 
                         message = "Login successful",
-                        isAdmin = _loginService.IsAdmin()
-                    }),
-                    LoginStatus.IncorrectUsername => BadRequest(new { message = "Email not found" }),
-                    LoginStatus.IncorrectPassword => BadRequest(new { message = "Incorrect password" }),
-                    _ => BadRequest(new { message = "Login failed" })
-                };
+                        isAdmin = _loginService.IsAdmin(),
+                        userId = user.UserId // Include user ID if needed
+                    });
+                }
+                else if (status == LoginStatus.IncorrectUsername)
+                {
+                    return BadRequest(new { message = "Email not found" });
+                }
+                else if (status == LoginStatus.IncorrectPassword)
+                {
+                    return BadRequest(new { message = "Incorrect password" });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Login failed" });
+                }
             }
             catch (Exception ex)
             {

@@ -1,28 +1,37 @@
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
-import Home from './Home';
-import Login from './Login';
-import ErrorPage from '../shared/ErrorPage';
-import UserDashboard from './UserDashboard';
-import AdminDashboard from './AdminDashboard';
+import Home from './Home'; // Import your Home component
+import Login from './Login'; // Import your Login component
+import UserDashboard from './UserDashboard'; // Import your User Dashboard component
+import AdminDashboard from './AdminDashboard'; // Import your Admin Dashboard component
+import ErrorPage from '../shared/ErrorPage'; // Import your Error Page component
+import { useAuth } from '../context/AuthContext'; // Import your Auth context
 
-const App = () => {
-  return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<Home />} />
-      <Route path="/login" element={<Login />} />
+const App: React.FC = () => {
+    const { isAuthenticated } = useAuth(); // Get authentication status from context
 
-      {/* Protected User Routes */}
-      <Route path="/user/dashboard" element={<UserDashboard />} />
+    return (
+        <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
 
-      {/* Protected Admin Routes */}
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            {/* Protected User Routes */}
+            <Route 
+                path="/user/dashboard" 
+                element={isAuthenticated ? <UserDashboard /> : <Navigate to="/login" />} 
+            />
 
-      {/* Catch-all Error Route */}
-      <Route path="*" element={<ErrorPage />} />
-    </Routes>
-  );
+            {/* Protected Admin Routes */}
+            <Route 
+                path="/admin/dashboard" 
+                element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />} 
+            />
+
+            {/* Catch-all Error Route */}
+            <Route path="*" element={<ErrorPage />} />
+        </Routes>
+    );
 };
 
 export default App;

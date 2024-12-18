@@ -28,7 +28,7 @@ const Login: React.FC = () => {
                 },
                 credentials: 'include', // Important for cookie-based authentication
                 body: JSON.stringify({ 
-                    Username: username, 
+                    Email: username, 
                     Password: password 
                 }),
             });
@@ -127,9 +127,15 @@ const Login: React.FC = () => {
                     {isLoading ? 'Logging in...' : 'Login'}
                 </button>
 
-                {/* Forgot Password Link */}
+                {/* Forgot Password Link  */}
                 <div className="forgot-password">
-                    <a href="/forgot-password">Forgot Password?</a>
+                    <a 
+                        href="https://nl.wikipedia.org/wiki/Dementie" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                    >
+                        Forgot Password?
+                    </a>
                 </div>
 
                 {/* Register Link */}
