@@ -191,8 +191,6 @@ namespace StarterKit.Services
             }
         }
 
-        // Other methods remain the same with similar error handling and logging...
-
         public async Task<EventDTO> AttendEventAsync(AttendEventDTO attendEventDto)
         {
             try 
@@ -203,7 +201,7 @@ namespace StarterKit.Services
                 var @event = await _context.Events.FindAsync(attendEventDto.EventId)
                     ?? throw new EventNotFoundException(attendEventDto.EventId);
 
-                // Additional validations (same as before)
+                // Validate event date
                 if (@event.EventDate.Date < DateTime.Today.Date)
                     throw new EventAttendanceException("Cannot attend past events");
 
@@ -292,6 +290,7 @@ namespace StarterKit.Services
                 throw;
             }
         }
+
         public async Task<ReviewDTO> CreateReviewAsync(int eventId, ReviewCreateDTO reviewCreateDTO)
         {
             try 
@@ -321,7 +320,9 @@ namespace StarterKit.Services
                     UserId = user.UserId,
                     Comment = reviewCreateDTO.Comment,
                     Rating = reviewCreateDTO.Rating,
-                    CreatedDate = DateTime.UtcNow
+                    CreatedDate = DateTime.UtcNow,
+                    User = user,
+                    Event = @event
                 };
 
                 _context.Reviews.Add(review);

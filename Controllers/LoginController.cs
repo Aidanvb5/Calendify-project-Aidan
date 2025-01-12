@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using StarterKit.Models.DTOs;
 using StarterKit.Services;
 using StarterKit.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace StarterKit.Controllers
 {
@@ -29,12 +30,12 @@ namespace StarterKit.Controllers
                 
                 if (status == LoginStatus.Success)
                 {
-                    var user = _loginService.GetLoggedInUser ();
+                    var user = _loginService.GetLoggedInUser();
                     return Ok(new 
                     { 
                         message = "Login successful",
                         isAdmin = _loginService.IsAdmin(),
-                        userId = user.UserId // Include user ID if needed
+                        userId = user.UserId
                     });
                 }
                 else if (status == LoginStatus.IncorrectUsername)

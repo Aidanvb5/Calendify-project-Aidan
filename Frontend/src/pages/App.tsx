@@ -1,14 +1,15 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Home from './Home'; // Import your Home component
-import Login from './Login'; // Import your Login component
-import UserDashboard from './UserDashboard'; // Import your User Dashboard component
-import AdminDashboard from './AdminDashboard'; // Import your Admin Dashboard component
-import ErrorPage from '../shared/ErrorPage'; // Import your Error Page component
-import { useAuth } from '../context/AuthContext'; // Import your Auth context
+import Home from './Home';
+import Login from './Login';
+import UserDashboard from './UserDashboard';
+import AdminDashboard from './AdminDashboard';
+import EventDetails from './EventDetails';
+import ErrorPage from '../shared/ErrorPage';
+import { useAuth } from '../context/AuthContext';
 
 const App: React.FC = () => {
-    const { isAuthenticated } = useAuth(); // Get authentication status from context
+    const { isAuthenticated } = useAuth();
 
     return (
         <Routes>
@@ -26,6 +27,12 @@ const App: React.FC = () => {
             <Route 
                 path="/admin/dashboard" 
                 element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />} 
+            />
+
+            {/* Event Details Route */}
+            <Route 
+                path="/events/:eventId" 
+                element={isAuthenticated ? <EventDetails /> : <Navigate to="/login" />} 
             />
 
             {/* Catch-all Error Route */}

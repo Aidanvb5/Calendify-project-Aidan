@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StarterKit.Models.DTOs;
 using StarterKit.Services;
+using StarterKit.Utils;
 
 namespace StarterKit.Controllers
 {

@@ -19,5 +19,9 @@ namespace StarterKit.Models
         public bool AdminApproval { get; set; }
 
         public required List<Event_Attendance> Event_Attendances { get; set; }
+
+        // Additional properties for validation
+        public int Capacity { get; set; } // Maximum number of attendees
+        public bool IsAvailable => EventDate.Date >= DateTime.Today.Date; // Check if the event is in the future
     }
 }

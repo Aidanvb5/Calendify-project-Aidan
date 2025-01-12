@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 
@@ -15,5 +14,8 @@ namespace StarterKit.Models.DTOs
         public string Location { get; set; }
         public List<ReviewDTO> Reviews { get; set; }
         public List<AttendeeDTO> Attendees { get; set; }
+        public int Capacity { get; set; }
+        public bool IsAvailable { get; set; }
+        public double AverageRating { get; set; }
     }
 }

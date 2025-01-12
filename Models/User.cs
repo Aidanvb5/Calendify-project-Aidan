@@ -18,5 +18,9 @@ namespace StarterKit.Models
         public required List<Attendance> Attendances { get; set; }
 
         public required List<Event_Attendance> Event_Attendances { get; set; }
+
+        // Additional properties
+        public string Role { get; set; } = "User"; // Default role: User or Admin
+        public bool IsActive { get; set; } = true; // Account status
     }
 }
